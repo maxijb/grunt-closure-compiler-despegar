@@ -1,7 +1,7 @@
 {
   "name": "grunt-closure-compiler-despegar",
   "description": "A Grunt task for Closure Compiler, by Despegar.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Hoteles Frontend Despegar.com",
     "email": "hotels-hf-it@despegar.com"
