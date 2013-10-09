@@ -41,6 +41,11 @@ module.exports = function(grunt) {
           '\n');
       return false;
     }
+    
+    if (typeof data.js == "string" && data.js.indexOf(',') != -1) {
+    	data.js = data.js.split(',');
+    }
+    
     data.js = grunt.file.expand(data.js);
     if (!data.js.length) {
     	// This task requires a minima an input file.
@@ -48,6 +53,7 @@ module.exports = function(grunt) {
     	return false;
     }
 
+    
     
     if (data.expand) {
     	jsOriginal = data.js;
@@ -62,14 +68,33 @@ module.exports = function(grunt) {
   
   
   function endCompress(compressed) {
+	  var tempOut = compressed.jsOutputFile;
 	  if (compressed.overrideSource) {
 		  grunt.file.copy( compressed.jsOutputFile, compressed.js);
 		  grunt.file.delete(compressed.jsOutputFile);
+		  tempOut = compressed.js;
 	  }
+	  if (compressed.sourcemap) {
+		  console.log("Agregando sourcemap")
+		  fs.appendFile(tempOut, '\n//# sourceMappingURL=' + compressed.sourcemapPrefix + compressed.jsOutputMapFile, function (err) {
+			  console.log("Sourcemap agregado.");  
+			  compressReady();
+		  });
+	  }
+	  else {
+		  compressReady();
+	  }
+	  
+	  
+  }
+  
+  function compressReady() {
 	  filesCompleted++;
 	  console.log("Comprimidos " + filesCompleted + " de " + jsOriginal.length + " archivos...");
-	  if (filesCompleted == jsOriginal.length) done();
+	  //si es uno soloel archivo terminamos
+	  if (!jsOriginal || filesCompleted >= jsOriginal.length) done();
 	  else {
+		  console.log("hasta aqui");
 		  data.js = jsOriginal[filesCompleted];
 		  compressNow(data);
 	  }
@@ -86,15 +111,23 @@ module.exports = function(grunt) {
     // Build command line.
     command += ' --js ';
     command += (typeof data.js === "string") ? data.js : data.js.join(' --js ');
-
+    
+    console.log("!!!!!!!!!!!!!!" + data.jsOutputFile);
     //si tiene que sobrescribir guarda un archivo temporal
     if (data.jsOutputFile != 'self') {
-    	data.jsOutputFile = data.js + minifiedSuffix;
-    	data.overrideSource = true; 
+    	data.jsOutputMapFile = data.jsOutputFile + '.map';
+    	data.overrideSource = false; 
     }
     else {
+    	console.log("((((((((((((((((((((((2" +data.js);
+    	data.jsOutputMapFile = data.js + '.map';
     	data.overrideSource = true; 
     }
+    
+    if (data.sourcemap) {
+    	command += " --create_source_map " + data.jsOutputMapFile + " --source_map_format=V3";
+    }
+    
     
     if (data.jsOutputFile) {
       command += ' --js_output_file ' + data.jsOutputFile;
@@ -129,6 +162,8 @@ module.exports = function(grunt) {
       }
     }
 
+    console.log(command);
+    
     // Minify WebGraph class.
     exec(command, { maxBuffer: data.maxBuffer * 1024 }, function(err, stdout, stderr) {
       if (err) {
